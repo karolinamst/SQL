@@ -1,0 +1,290 @@
+
+--Wypisz zamówienia pracowników 2,4,5. Znajdź imiona i nazwiska tych pracowników
+
+select o2."OrderID", e."EmployeeID", e."LastName", e."FirstName" from employees e 
+join orders o2 on e."EmployeeID" = o2."EmployeeID" 
+where e."EmployeeID" =2 or e."EmployeeID" =4 or e."EmployeeID" =5 
+order by e."EmployeeID" ;
+
+
+
+--Wypisz zamówienia pracowników o ID parzystym 
+
+select "EmployeeID", "OrderID" from orders o 
+where "EmployeeID" % 2 = 0;
+
+select "OrderID", "EmployeeID" from orders o2 ;
+
+--Wypisz imiona Pracowników – tak aby poszczególne imię wyświetlono jeden raz. Wyświetl je wielkimi literami.
+select distinct UPPER("FirstName") from employees e ;
+
+--Wypisz zamówienia z 2016 roku.
+select "OrderID", "OrderDate" from orders o 
+where date_part('year',"OrderDate")=1996 ;
+
+
+-- Wyznacz z tabeli z pracownikami Pracownika o ID=1, dodaj do wyników zmienną
+--losową. Jeżeli zmienna losowa ma wartość >0.7 dodaj komunikat „ dodatkowy dzień
+--wolny”, jeżeli będzie pomiędzy 0.1 a 0.7 dodaj komunikat „brak nagrody”, jeżeli
+--będzie mniejsza od 0.1 podaj komunikat „musisz zrobić nadgodziny”. Wykonaj skrypt
+--kilka razy. Czy komunikat się zmienia?
+
+Tak, zmienia.
+    
+create view l_losowa as
+select "EmployeeID", "FirstName", "LastName", random() as liczba_losowa from employees e 
+where "EmployeeID" = 1;
+
+select *
+, case when "liczba_losowa" > 0.7 then 'dodatkowy dzień wolny'
+	   when "liczba_losowa" <= 0.7 and "liczba_losowa" >= 0.1 then 'brak nagrody'
+       when "liczba_losowa" < 0.1 then 'musisz zrobić nadgodziny' end as komunikat
+from l_losowa 
+
+--Wyznacz terytorium działania każdego pracownika.
+
+select * from employees e2 ;
+select * from employeeterritories e2 ;
+
+select e2."FirstName", e2."LastName", et."TerritoryID" from employees e2 
+join employeeterritories et on e2."EmployeeID" = et."EmployeeID" ;
+
+--Wyznacz zamówienia z 1 kwartału 2016 roku wraz z dodaniem przewoźnika i jego
+--numeru telefonu. Z numeru telefonu usuń nawiasy. W wynikach dla zmiennej
+--shipregion, wartości puste zastąp nazwą miasta.
+
+select * from orders o3 ;
+select * from shippers s ;
+
+select *
+,  coalesce ("ShipRegion", "ShipCity") as miasto_zamiast_null
+,  replace("Phone", '(503)','503') as tel_bez_nawiasow
+from orders o2
+join shippers s2 on o2."ShipVia" = s2."ShipperID" 
+where date_part('quarter',"OrderDate")=1 and  date_part('year',"OrderDate")=1997;
+
+--Wyznacz produkty wraz z nazwą kategorii oraz nazwą dostawcy, dla których w
+--magazynie jest mniej niż 15 jednostek lub są przecenione.
+
+
+select p."ProductName", c."CategoryName", s."CompanyName", p."UnitsInStock", od."Discount"
+from products p
+join categories c on p."CategoryID" = c."CategoryID"
+join suppliers s on p."SupplierID" = s."SupplierID"
+join order_details od on p."ProductID" = od."ProductID"
+where p."UnitsInStock" < 15 or od."Discount" <> 0
+
+--DQL – JOIN, UNION, FUNKCJE AGREGUJĄCE:
+--a. Sprawdź ilu jest w bazie pracowników ze stanowiskiem (TITLE) zawierających słowo: „Manager”.
+
+select * from employees e2 ;
+select count(*) from employees e2 where "Title" ilike '%Manager%';
+
+--b. Policz ilu jest pracowników, którzy pracują w firmie poszczególną liczbę lat.
+
+select * from employees e ;
+
+select date_part('year',"HireDate") as rok
+,      count(*) from employees e2 
+group by rok
+order by rok
+;
+
+--c. Wyznacz wiek Pracowników w dniu zatrudnienia. Jaka jest maksymalna wartość? /55
+select
+("HireDate" - "BirthDate") / 365 as wiek_w_dniu_zatrudnienia
+from employees e2 
+order by wiek_w_dniu_zatrudnienia desc ;
+-- 2 wersja
+select max(("HireDate" - "BirthDate")/365)
+from employees e2 ;
+
+--select *, age("BirthDate")
+--from employees e2 ;
+
+--Do zestawienia liczby pracowników w departamentach dodaj (zakładamy, że DZIŚ MAMY 1 LISTOPADA 2013 ROKU):
+--i. Liczbę pracowników po 50 r.ż.
+--ii. Liczbę pracowników w wieku emerytalnym (uwzględnij płeć)
+--iii. Liczbę pracowników pracujących ponad 3 lata
+--iv. Średni, maksymalny, minimalny, staż pracy
+
+select * from employees e ;
+select
+("HireDate" - "BirthDate") / 365 as wiek_w_dniu_zatrudnienia,
+('2013-11-01' - "BirthDate") / 365 as wiek_w_2013
+from employees e2 
+
+--select "FirstName", "LastName", "BirthDate", "HireDate" ,
+--("HireDate" - "BirthDate") / 365 as wiek_w_dniu_zatrudnienia,
+--('2013-11-01' - "BirthDate") / 365 as wiek_w_2013,
+--count(case when (('2013-11-01' - "BirthDate") / 365) > 50 then 0 end) as liczba_prac_powyzej_50_lat
+--from employees e2 
+--group by
+--"FirstName",
+--"LastName",
+--"BirthDate",
+--"HireDate"
+
+create view pracownicy_2013 as
+select "FirstName", "LastName", "BirthDate", "HireDate", "TitleOfCourtesy", 
+("HireDate" - "BirthDate") / 365 as wiek_w_dniu_zatrudnienia,
+('2013-11-01' - "BirthDate") / 365 as wiek_w_2013
+from employees e2 
+
+
+
+select * from pracownicy_2013 ;
+
+
+
+select "FirstName", "LastName", "BirthDate", "HireDate", "TitleOfCourtesy", 
+count(case when "wiek_w_2013" > 50 then 0 end) as liczba_prac_powyzej_50_lat,
+count(case when "wiek_w_2013" >= 60 and "TitleOfCourtesy" ilike 'M_s.' then 0 end) as kobiety_w_wieku_emerytalnym,
+count(case when "wiek_w_2013" >= 65 and "TitleOfCourtesy" ilike '_r.' then 0 end) as mezczyzni_w_wieku_emerytalnym,
+count(case when '2013-11-01' - "HireDate" > 3 then 0 end) as staz_pracy_powyzej_3_lat,
+max(('2013-11-01' - "HireDate") / 365) as max_staz_pracy, 
+min(('2013-11-01' - "HireDate") / 365) as min_staz_pracy, 
+round(avg('2013-11-01' - "HireDate") / 365, 0) srednia_lata_stazu_pracy
+from pracownicy_2013 
+group by "FirstName",
+		 "LastName",
+		 "BirthDate",
+		 "HireDate",
+         "TitleOfCourtesy"
+;
+
+select 
+count(case when "wiek_w_2013" > 50 then 0 end) as liczba_prac_powyzej_50_lat,
+count(case when wiek_w_2013 >= 65 and "TitleOfCourtesy" ilike 'M_s.' then 0 end) as kobiety_w_wieku_emerytalnym,
+count(case when "wiek_w_2013" >= 65 and "TitleOfCourtesy" ilike '_r.' then 0 end) as mezczyzni_w_wieku_emerytalnym,
+count(case when '2013-11-01' - "HireDate" > 3 then 0 end) as staz_pracy_powyzej_3_lat,
+max(('2013-11-01' - "HireDate") / 365) as max_staz_pracy, 
+min(('2013-11-01' - "HireDate") / 365) as min_staz_pracy, 
+round(avg('2013-11-01' - "HireDate") / 365, 0) srednia_lata_stazu_pracy
+from pracownicy_2013 ;
+
+
+
+--Sprawdź datę pierwszego i ostatniego zamówienia.
+
+select 
+		min("OrderDate") data_pierwszego_zam
+,		max("OrderDate") data_ostatniego_zam
+from orders o ;
+
+--Stwórz zestawienie sprzedaży dla Klientów najświeższy rok. Wyniki podziel na
+--kwartały. wyświetl liczbę zamówień, średnią, maksymalną, minimalną wartość oraz
+--sumę z pól Freight, oraz z kwoty zamówienia.
+
+
+
+select  
+	    o."OrderDate" 
+,		date_part('quarter', o."OrderDate") as kwartal
+,		count(distinct o."OrderID") as liczba_zamowien
+,		count(o."OrderID") as liczba_roznych_prduktów_w_zawmowieniu
+,		round(min(od."UnitPrice"*od."Quantity"*(1-od."Discount")):: numeric,2) as wartosc_min
+,		round(max(od."UnitPrice"*od."Quantity"*(1-od."Discount")):: numeric,2) as wartosc_max
+,		round(cast(sum(od."UnitPrice"*od."Quantity"*(1-od."Discount")) as numeric),2) as cena_calkowita
+,    	round(sum(o."Freight")::numeric,2) as suma_freight
+from orders o 
+join order_details od on o."OrderID"  = od."OrderID" 
+where to_char(o."OrderDate",'YYYY') = '1998'
+group by rollup 
+		  (o."OrderDate")
+;
+
+--to takie dodatkowe
+/*select 
+        round(sum(o."Freight")::numeric,2) as suma_freight        
+,	    round(min(o."Freight")::numeric,2) as min_freight
+,       round(max(o."Freight")::numeric,2) as  max_freight
+,	    round(min(od."UnitPrice"*od."Quantity"*(1-od."Discount"))) as min_cena
+,	    round(max(od."UnitPrice"*od."Quantity"*(1-od."Discount"))) as max_cena
+,		round(cast(sum(od."UnitPrice"*od."Quantity"*(1-od."Discount")) as numeric),2) as cena_calkowita
+from orders o 
+join order_details od on o."OrderID"  = od."OrderID" 
+*/
+
+--. Stwórz zestawienie sprzedaży dla sklepów za najstarszy rok. Wyniki podziel na z
+--kwartały. wyświetl liczbę zamówień, średnią, maksymalną, minimalną wartość oraz
+--sumę z pól Freight, SUBTOTAL, oraz TOTALDUE. 
+
+select  
+	    o."OrderDate" 
+,		date_part('quarter', o."OrderDate") as kwartal
+,		count(distinct o."OrderID") as liczba_zamowien
+,		count(o."OrderID") as liczba_roznych_prduktów_w_zawmowieniu
+,		round(min(od."UnitPrice"*od."Quantity"*(1-od."Discount")):: numeric,2) as wartosc_min
+,		round(max(od."UnitPrice"*od."Quantity"*(1-od."Discount")):: numeric,2) as wartosc_max
+,		round(cast(sum(od."UnitPrice"*od."Quantity"*(1-od."Discount")) as numeric),2) as cena_calkowita
+,    	round(sum(o."Freight")::numeric,2) as suma_freight
+from orders o 
+join order_details od on o."OrderID"  = od."OrderID" 
+where to_char(o."OrderDate",'YYYY') = '1996'
+group by rollup (o."OrderDate") ;
+
+--h. Połącz wyniki z dwóch poprzednich zapytań za pomocą UNION.
+
+
+select  
+	    o."OrderDate" 
+,		date_part('quarter', o."OrderDate") as kwartal
+,		count(distinct o."OrderID") as liczba_zamowien
+,		count(o."OrderID") as liczba_roznych_prduktów_w_zawmowieniu
+,		round(min(od."UnitPrice"*od."Quantity"*(1-od."Discount")):: numeric,2) as wartosc_min
+,		round(max(od."UnitPrice"*od."Quantity"*(1-od."Discount")):: numeric,2) as wartosc_max
+,		round(cast(sum(od."UnitPrice"*od."Quantity"*(1-od."Discount")) as numeric),2) as cena_calkowita
+,    	round(sum(o."Freight")::numeric,2) as suma_freight
+from orders o 
+join order_details od on o."OrderID"  = od."OrderID" 
+where to_char(o."OrderDate",'YYYY') = '1998'
+group by rollup 
+		  (o."OrderDate")
+UNION
+select  
+	    o."OrderDate" 
+,		date_part('quarter', o."OrderDate") as kwartal
+,		count(distinct o."OrderID") as liczba_zamowien
+,		count(o."OrderID") as liczba_roznych_prduktów_w_zawmowieniu
+,		round(min(od."UnitPrice"*od."Quantity"*(1-od."Discount")):: numeric,2) as wartosc_min
+,		round(max(od."UnitPrice"*od."Quantity"*(1-od."Discount")):: numeric,2) as wartosc_max
+,		round(cast(sum(od."UnitPrice"*od."Quantity"*(1-od."Discount")) as numeric),2) as cena_calkowita
+,    	round(sum(o."Freight")::numeric,2) as suma_freight
+from orders o 
+join order_details od on o."OrderID"  = od."OrderID" 
+where to_char(o."OrderDate",'YYYY') = '1996'
+group by rollup (o."OrderDate") ;
+
+--Stwórz to samo zestawienie, co w powyższym zadaniu bez użycia UNION, a modyfikując zapytanie
+
+select  
+	    o."OrderDate" 
+,		date_part('quarter', o."OrderDate") as kwartal
+,		count(distinct o."OrderID") as liczba_zamowien
+,		count(o."OrderID") as liczba_roznych_prduktów_w_zawmowieniu
+,		round(min(od."UnitPrice"*od."Quantity"*(1-od."Discount")):: numeric,2) as wartosc_min
+,		round(max(od."UnitPrice"*od."Quantity"*(1-od."Discount")):: numeric,2) as wartosc_max
+,		round(cast(sum(od."UnitPrice"*od."Quantity"*(1-od."Discount")) as numeric),2) as cena_calkowita
+,    	round(sum(o."Freight")::numeric,2) as suma_freight
+from orders o 
+join order_details od on o."OrderID"  = od."OrderID" 
+where to_char(o."OrderDate",'YYYY') = '1998'
+group by rollup 
+		  (o."OrderDate")
+union ALL
+select  
+	    o."OrderDate" 
+,		date_part('quarter', o."OrderDate") as kwartal
+,		count(distinct o."OrderID") as liczba_zamowien
+,		count(o."OrderID") as liczba_roznych_prduktów_w_zawmowieniu
+,		round(min(od."UnitPrice"*od."Quantity"*(1-od."Discount")):: numeric,2) as wartosc_min
+,		round(max(od."UnitPrice"*od."Quantity"*(1-od."Discount")):: numeric,2) as wartosc_max
+,		round(cast(sum(od."UnitPrice"*od."Quantity"*(1-od."Discount")) as numeric),2) as cena_calkowita
+,    	round(sum(o."Freight")::numeric,2) as suma_freight
+from orders o 
+join order_details od on o."OrderID"  = od."OrderID" 
+where to_char(o."OrderDate",'YYYY') = '1996'
+group by rollup (o."OrderDate") ;
+
+-- zamienilam union na union all nie wiem, o to chodzilo?

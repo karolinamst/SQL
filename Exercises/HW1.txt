@@ -1,0 +1,56 @@
+create table dentists(
+location varchar(30)
+, period integer
+, indicator varchar(30)
+, First_Tooltip numeric
+);
+
+
+select * from dentists;
+select "Period", "First Tooltip" from dentists d ;
+
+ALTER TABLE dentists RENAME COLUMN "Period" TO Rok;
+ALTER TABLE dentists RENAME COLUMN "First Tooltip" TO Wskaznik;
+
+select * from dentists d ;
+
+select "Location", "rok" from dentists d2
+where "Location" = 'B%'
+or rok = 2006
+and "Location" like '%land'; 
+
+select * from dentists d2
+where "Location" like '%land';
+
+select MIN(wskaznik) min_indeks
+, MAX(wskaznik) max_indeks
+, AVG(wskaznik) srednia
+from dentists d2 ;
+
+select MIN(wskaznik) min_indeks_PL
+, MAX(wskaznik) max_indeks_PL
+, AVG(wskaznik) srednia_PL
+from dentists d2
+where "Location" = 'Poland';
+
+
+select * from dentists d2
+where "Location" = 'Poland'
+order by rok;
+
+select min(rok) min_rok_PL
+, max(rok) max_rok_PL
+from dentists d2
+where "Location" = 'Poland';
+
+select min(rok) min_rok_general
+, max(rok) max_rok_general
+from dentists d2;
+
+SELECT * from dentists d2
+where rok = '2019'
+order by wskaznik desc ;
+
+SELECT * from dentists d2
+where rok = '1990'
+order by wskaznik desc ;

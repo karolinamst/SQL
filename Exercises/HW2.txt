@@ -1,0 +1,83 @@
+
+--1.Sprawdź jak wyglądają zapasy magazynowe poszczególnych kategorii produktów (tabele
+products, categories) - suma unitinstock
+
+
+
+select 	 
+		 p2."CategoryID"
+,	 	 p2."UnitsInStock"
+,		 categories."CategoryName"
+, 		 sum("UnitsInStock") as suma_na_id
+from products p2
+join categories on p2."CategoryID" = categories."CategoryID"
+group by cube (p2."UnitsInStock")
+,			  p2."CategoryID"	
+,			  categories."CategoryName"
+order by 1
+
+
+
+--2.Do wyników tabeli orders dodaj numer zamówienia w miesiącu (partycjonowanie po
+miesiącach) kolejność według daty.
+• Dodaj analogiczne pole, ale w kolejności malejącej.
+
+select *
+, row_number() over (partition by to_char (o."OrderDate" ,'YYYY-MM') order by o."OrderDate") as nr_zam
+, row_number() over (partition by to_char (o."OrderDate" ,'YYYY-MM') order by o."OrderDate" desc) as nr_zam_desc
+from orders o ;
+
+--Wypisz datę pierwszego i ostatniego zamówienia w poszczególnych miesiącach.
+
+create view c_zamowienia as
+select * 
+,   row_number()    over(partition by to_char(o."OrderDate", 'yyyy-mm') order by o."OrderDate") as nr_zam
+,   row_number()    over(partition by to_char(o."OrderDate", 'yyyy-mm') order by o."OrderDate" desc) as nr_zam_desc
+from orders o 
+
+
+select "OrderDate", "nr_zam", "nr_zam_desc"
+from c_zamowienia
+where nr_zam = 1 or nr_zam_desc = 1;
+
+--Dodaj do wyników kwotę zamówienia
+
+select o."OrderDate" 
+,	round(cast(sum(od."UnitPrice" * od."Quantity" * (1-od."Discount")) as numeric),2) as kwota_zamowienia
+from orders o 
+join order_details od on o."OrderID" = od."OrderID"
+group by o."OrderDate" 
+order by o."OrderDate" 
+
+--Podziel zbiór za pomocą funkcji ntile na 5 podzbiorów według kwoty zamówienia
+
+select *
+,	ntile(5)    over (order by kwota_zamowienia) as ntile_5
+from kwota_zamowienia ;
+
+--Wyznacz minimalną i maksymalną wartość z wyników poprzedniego punktu dla każdego
+klienta. (wyniki funkcji ntile)
+
+create view fntile2 as
+select *
+,   ntile(5)    over (order by kwota_zamowienia) as ntile_5
+from kwota_zamowienia;
+
+select  "CompanyName"
+,       "ntile_5"
+,       max("kwota_zamowienia")
+,       min("kwota_zamowienia")
+from fntile2 f
+join customers c on c."CustomerID" = "CustomerID" 
+group by "CompanyName" , "ntile_5";
+
+--Sprawdź, czy istnieją klienci premium (którzy zawsze występują w kwnatylu 4 lub 5).
+
+
+select  distinct ("CompanyName")
+,       "ntile_5"
+from fntile2
+join customers c on c."CustomerID" ="CustomerID" 
+where "ntile_5" = 4 or "ntile_5" = 5;
+
+

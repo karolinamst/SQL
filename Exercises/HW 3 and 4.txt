@@ -1,0 +1,139 @@
+--Jaka jest dynamika miesięczna (MoM) zmiany liczby wniosków dla tego partnera w
+--roku 2017? Skorzystaj ze składni podzapytania CTE. [8%]
+
+
+
+with zmiana_mom as (
+select to_char(data_utworzenia, 'yyyy-mm') as miesiac
+, count(id) as liczba_wnioskow
+, lag(count(id)) over () as miesiac_poprzedni
+from wnioski w
+where extract(year from data_utworzenia) = 2017 and partner = 'tui'
+group by miesiac
+order by miesiac	
+)
+select *
+, round((liczba_wnioskow - miesiac_poprzedni) * 100.0/ miesiac_poprzedni, 2) as mom
+from zmiana_mom
+
+
+
+--2. Jak zmienia się suma wypłaconych rekompensat w kolejnych miesiącach 2017 roku?
+--Policz MoM z wykorzystaniem podzapytania CTE. [8%]
+
+with suma_rekompensata as (
+select to_char(data_utworzenia, 'yyyy-mm') as miesiac
+,      sum(kwota_rekompensaty) as suma
+,      lag(sum(kwota_rekompensaty)) over () as sum_lag
+from wnioski w
+where stan_wniosku = 'wyplacony' and partner = 'tui' and extract(year from data_utworzenia) = 2017
+group by miesiac
+order by miesiac
+)
+select *
+, round((suma-sum_lag) * 100.0 / sum_lag, 2) as MoM
+from suma_rekompensata
+
+
+--Jak kwota rekompensaty jest skorelowana z liczbą pasażerów dla różnych typów
+--podróży i typów wniosków (pola typ_podrozy i typ_wniosku)? Analizę wykonaj dla roku 2017. [8%]
+
+select typ_podrozy, typ_wniosku
+,  corr(w.kwota_rekompensaty_oryginalna, liczba_pasazerow) 
+from wnioski w
+where date_part('year', data_utworzenia) = '2017'
+group by 1, 2
+
+select typ_podrozy, typ_wniosku
+,  corr(w.kwota_rekompensaty_oryginalna, liczba_pasazerow) 
+from wnioski w
+where extract(year from data_utworzenia) = 2017
+group by 1, 2
+
+----Jak wygląda średnia, mediana i moda rekompensaty dla różnych typów podróży i typów wniosków (pola typ_podrozy i typ_wniosku)? Analizę wykonaj dla roku 2017. [4%]
+
+select typ_podrozy, typ_wniosku
+,  mode() within group (order by kwota_rekompensaty)
+, round(avg(kwota_rekompensaty),2)
+, percentile_disc(0.5) within group (order by kwota_rekompensaty) as mediana
+from wnioski
+where to_char(data_utworzenia,'yyyy') = '2017'
+group by typ_podrozy, typ_wniosku
+
+
+--Oblicz dystrybuję procentową typów wniosków dla tego partnera (jaką część
+--wszystkich wniosków stanowią wnioski danego typu). [8%]
+
+
+% wnoskow tui do wszystkich wnioskow
+
+select
+  (select count (*) from wnioski) as wszystkie_zamowienia
+, (select count(*) from wnioski w 
+  where
+  partner = 'tui'
+  ) as zamowienia_tui
+  , (select count(*) from wnioski w
+  where partner = 'tui'
+  ) *100/ (select count(*) from wnioski) as procent
+
+//
+
+with dyst as 
+(select count(id) as suma from wnioski where partner='tui')
+select   w.typ_wniosku, count(w.id) as liczba_wnioskow,  round(count(w.id)::numeric/dyst.suma *100,2) as procent
+from wnioski w
+cross join dyst
+where partner ='tui'
+group by w.partner, w.typ_wniosku, dyst.suma
+order by 3;
+
+
+
+--Oblicz P25 i P75 wysokości wypłaconych rekompensat. Ile wniosków otrzymało rekompensaty poniżej i równe P25, a ile powyżej i równe P75? Skorzystaj percentile_disc i z funkcji count w połączeniu z case. [12%]
+
+
+select  count(case when kwota_rekompensaty <=
+		(select percentile_disc(0.25) within group (order by kwota_rekompensaty)
+		from wnioski) then id end) as p_25
+,		count(case when kwota_rekompensaty >= 
+		(select percentile_disc(0.75) within group (order by kwota_rekompensaty) 
+		from wnioski) then id end) as p_75
+from wnioski
+
+--Wyświetl listę wniosków, których wypłacona rekompensata była równa lub wyższa niż P75.
+
+select *
+from wnioski w 
+where kwota_rekompensaty >= (select percentile_disc(0.75) 
+			within group (order by kwota_rekompensaty) from wnioski)
+
+
+
+
+
+--Znajdź jaki powód operatora jest zgłaszany najczęściej przez każdego z operatorów.
+
+select  partner
+,		powod_operatora
+,		count(powod_operatora) as ilosc
+from wnioski
+group by partner 
+,		powod_operatora 
+order by partner, ilosc desc
+;		
+
+
+--Stwórz tabelę przestawną, gdzie rzędami będą poszczególni operatorzy podróży, w
+--kolumnach typy wniosków, a wartościami będą średnie kwoty rekompensaty. [4%]
+
+select partner, typ_wniosku, round(avg(kwota_rekompensaty),2) as srednia_rekompensaty from wnioski group by 1, 2
+
+select distinct(stan_wniosku) from wnioski;
+
+  
+SELECT *
+FROM crosstab('select partner::text, typ_wniosku::text, round(avg(kwota_rekompensaty),2)::numeric FROM wnioski
+group by 1, 2')
+AS final_result("jezyk" text, "anulowany" numeric, "opozniony" numeric,
+"przepelniony" numeric);
